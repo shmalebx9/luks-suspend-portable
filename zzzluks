@@ -1,7 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 chrootdir="/boot/suspend"
-cryptroot=$(grep -E "^/dev/mapper/[a-zA-Z0-9_\-]+ / " /proc/mounts | sed -r "s|^/dev/mapper/([a-zA-Z0-9_\-]+).*|\1|")
+cryptroot=$(lsblk -lno 'NAME,MOUNTPOINT' | awk '$2 ~ "/$" {print $1}')
+
+if [ -z ${cryptroot+x} ] ; then
+ echo "no cryptroot found"
+ exit 1
+else
+ echo "cryptroot set to $cryptroot"
+fi
 
 for dir in dev proc sys; do
   mount --rbind /$dir $chrootdir/$dir
