@@ -1,0 +1,16 @@
+#!/bin/sh
+
+chrootdir="/boot/suspend"
+cryptroot=$(grep -E "^/dev/mapper/[a-zA-Z0-9_\-]+ / " /proc/mounts | sed -r "s|^/dev/mapper/([a-zA-Z0-9_\-]+).*|\1|")
+
+for dir in dev proc sys; do
+  mount --rbind /$dir $chrootdir/$dir
+done
+
+openvt -c 8 -sw chroot $chrootdir /chrootsuspend.sh "$cryptroot" 
+
+for dir in dev proc sys; do
+ umount -l $chrootdir/$dir
+done
+
+pkill -9 -t pts/8
