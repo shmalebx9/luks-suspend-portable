@@ -1,0 +1,44 @@
+#!/bin/bash
+
+getdisplay(){
+for p in $(pgrep -t $(cat /sys/class/tty/tty0/active));
+do
+            d=$(awk 'match($0,"DISPLAY="){print substr($0,RSTART+8,3)}' /proc/$p/environ 2>/dev/null);
+                [ -n "$d" ]  && export DISPLAY="$d.0" \
+                && export XAUTHORITY="/home/$(ps --no-headers -o user $p)/.Xauthority" \
+                && return 0
+done;
+}
+
+lock_disk(){
+chrootdir="/boot/suspend"
+cryptroot=$(df -hT | awk '$7 ~ "/$" {print $1}')
+
+if [ -z ${cryptroot+x} ] ; then
+ echo "no cryptroot found"
+ exit 1
+else
+ echo "cryptroot set to $cryptroot"
+fi
+
+for dir in dev proc sys; do
+  mount --rbind /$dir $chrootdir/$dir
+done
+
+openvt -c 8 -swf chroot $chrootdir /chrootsuspend.sh "$cryptroot" 
+
+for dir in dev proc sys; do
+ umount -l $chrootdir/$dir
+done
+mount devpts /dev/pts -t devpts
+exit
+}
+
+lock_screen(){
+ getdisplay
+ #xsecurelock
+ sleep 1
+ lock_disk
+}
+
+lock_screen
